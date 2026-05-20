@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Currency Converter App</string>
+    <string name="enter_amount">Please enter an amount</string>
+    <string name="invalid_number">Invalid number format</string>
+    <string name="error_parsing">Error parsing data</string>
+    <string name="api_error">Unable to fetch rates. Check internet connection.</string>
+    <string name="convert">CONVERT</string>
+    <string name="result_placeholder">Result will appear here</string>
+
+    <!-- ✅ Add missing strings -->
+    <string name="trend_graph">Trend Graph (7 days)</string>
+    <string name="no_history">No history data found</string>
+    <string name="error_fetching">Error fetching history data</string>
+</resources>
