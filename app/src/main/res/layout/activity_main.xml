@@ -15,6 +15,38 @@
         android:layout_centerInParent="true"
         android:padding="24dp">
 
+        <!-- App Logo -->
+        <ImageView
+            android:id="@+id/appLogo"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@drawable/ic_currency_logo"
+            android:layout_gravity="center"
+            android:layout_marginBottom="12dp" />
+
+        <!-- App Title -->
+        <TextView
+            android:id="@+id/appTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Currency Converter Pro"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:gravity="center"
+            android:layout_marginBottom="8dp" />
+
+        <!-- App Tagline -->
+        <TextView
+            android:id="@+id/appTagline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Fast • Reliable • Offline Ready"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            android:gravity="center"
+            android:layout_marginBottom="20dp" />
+
         <!-- Amount Input -->
         <EditText
             android:id="@+id/amountInput"
@@ -80,14 +112,9 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:layout_marginBottom="20dp"
-            android:textColor="@android:color/white" />
-
-        <!-- Chart -->
-        <com.github.mikephil.charting.charts.LineChart
-            android:id="@+id/lineChart"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="16dp" />
+            android:divider="@android:color/darker_gray"
+            android:dividerHeight="1dp"
+            android:background="@color/black" />
 
     </LinearLayout>
 </RelativeLayout>

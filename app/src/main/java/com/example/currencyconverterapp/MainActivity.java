@@ -4,18 +4,13 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 import com.android.volley.*;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
-import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.components.Description;
-import com.github.mikephil.charting.data.*;
 
 import org.json.JSONObject;
 
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class MainActivity extends AppCompatActivity {
@@ -25,13 +20,15 @@ public class MainActivity extends AppCompatActivity {
     Button convertButton;
     TextView resultText;
     ListView historyList;
-    LineChart chart;
 
     ArrayList<String> conversionHistory;
     ArrayAdapter<String> historyAdapter;
 
     SharedPreferences prefs;
     SharedPreferences.Editor editor;
+
+    // ✅ Your UniRateAPI key
+    private static final String API_KEY = "G14dYlMeHCzLjDyrcDlO3CMoEI03tBCS6XLmNploOv0eTNmOOHm1m2Gre0632NQD";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,11 +41,8 @@ public class MainActivity extends AppCompatActivity {
         convertButton = findViewById(R.id.convertButton);
         resultText = findViewById(R.id.resultText);
         historyList = findViewById(R.id.historyList);
-        chart = findViewById(R.id.lineChart);
 
-        String[] currencies = {"USD", "PKR", "EUR", "INR"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, currencies);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> adapter = getCurrencyAdapter();
         fromCurrency.setAdapter(adapter);
         toCurrency.setAdapter(adapter);
 
@@ -62,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         convertButton.setOnClickListener(v -> {
             String amountStr = amountInput.getText().toString();
             if (amountStr.isEmpty()) {
-                resultText.setText(getString(R.string.enter_amount));
+                resultText.setText(R.string.enter_amount);
                 return;
             }
 
@@ -70,15 +64,15 @@ public class MainActivity extends AppCompatActivity {
             try {
                 amount = Double.parseDouble(amountStr);
             } catch (NumberFormatException e) {
-                resultText.setText(getString(R.string.invalid_number));
+                resultText.setText(R.string.invalid_number);
                 return;
             }
 
             String from = fromCurrency.getSelectedItem().toString();
             String to = toCurrency.getSelectedItem().toString();
 
-            // ✅ Frankfurter API for latest conversion
-            String url = "https://api.frankfurter.app/latest?amount=" + amount + "&from=" + from + "&to=" + to;
+            // ✅ UniRateAPI latest conversion
+            String url = "https://api.unirate.live/latest?base=" + from + "&symbols=" + to + "&apikey=" + API_KEY;
 
             RequestQueue queue = Volley.newRequestQueue(this);
             JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
@@ -87,85 +81,33 @@ public class MainActivity extends AppCompatActivity {
                             if (response.has("rates")) {
                                 JSONObject ratesObj = response.getJSONObject("rates");
                                 if (ratesObj.has(to)) {
-                                    double converted = ratesObj.getDouble(to);
+                                    double rate = ratesObj.getDouble(to);
+                                    double converted = amount * rate;
 
                                     String result = String.format(Locale.getDefault(),
                                             "%.2f %s = %.2f %s", amount, from, converted, to);
                                     resultText.setText(result);
 
+                                    // ✅ Save conversion in history
                                     conversionHistory.add(result);
                                     historyAdapter.notifyDataSetChanged();
 
-                                    editor.putFloat("lastRate_" + from + "_" + to, (float) converted / (float) amount);
+                                    // ✅ Save last rate for offline use
+                                    editor.putFloat("lastRate_" + from + "_" + to, (float) rate);
                                     editor.apply();
 
-                                    // ✅ Frankfurter API for last 7 days history
-                                    Calendar cal = Calendar.getInstance();
-                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-                                    String endDate = sdf.format(cal.getTime());
-                                    cal.add(Calendar.DAY_OF_YEAR, -7);
-                                    String startDate = sdf.format(cal.getTime());
-
-                                    String historyUrl = "https://api.frankfurter.app/" + startDate + ".." + endDate +
-                                            "?from=" + from + "&to=" + to;
-
-                                    JsonObjectRequest historyRequest = new JsonObjectRequest(Request.Method.GET, historyUrl, null,
-                                            histResponse -> {
-                                                try {
-                                                    if (histResponse.has("rates")) {
-                                                        JSONObject ratesObjHist = histResponse.getJSONObject("rates");
-                                                        ArrayList<Entry> entries = new ArrayList<>();
-                                                        int day = 1;
-
-                                                        Iterator<String> keys = ratesObjHist.keys();
-                                                        while (keys.hasNext()) {
-                                                            String date = keys.next();
-                                                            JSONObject dayRates = ratesObjHist.getJSONObject(date);
-                                                            if (dayRates.has(to)) {
-                                                                double histRate = dayRates.getDouble(to);
-                                                                entries.add(new Entry(day, (float) histRate));
-                                                                day++;
-                                                            }
-                                                        }
-
-                                                        if (!entries.isEmpty()) {
-                                                            LineDataSet dataSet = new LineDataSet(entries, from + " → " + to + " Trend (7 days)");
-                                                            dataSet.setColor(ContextCompat.getColor(this, android.R.color.holo_blue_light));
-                                                            dataSet.setValueTextColor(ContextCompat.getColor(this, android.R.color.white));
-
-                                                            LineData lineData = new LineData(dataSet);
-                                                            chart.setData(lineData);
-
-                                                            Description desc = new Description();
-                                                            desc.setText(getString(R.string.trend_graph));
-                                                            chart.setDescription(desc);
-
-                                                            chart.invalidate();
-                                                        } else {
-                                                            chart.clear();
-                                                            resultText.setText(getString(R.string.no_history));
-                                                        }
-                                                    }
-                                                } catch (Exception e) {
-                                                    resultText.setText(getString(R.string.error_parsing));
-                                                }
-                                            },
-                                            error -> resultText.setText(getString(R.string.error_fetching))
-                                    );
-
-                                    queue.add(historyRequest);
-
                                 } else {
-                                    resultText.setText("Currency not found in response");
+                                    resultText.setText(R.string.currency_not_found);
                                 }
                             } else {
-                                resultText.setText(getString(R.string.api_error));
+                                resultText.setText(R.string.api_error);
                             }
                         } catch (Exception e) {
-                            resultText.setText(getString(R.string.error_parsing));
+                            resultText.setText(R.string.error_parsing);
                         }
                     },
                     error -> {
+                        // ✅ Offline fallback
                         float savedRate = prefs.getFloat("lastRate_" + from + "_" + to, 0f);
                         if (savedRate != 0f) {
                             double converted = amount * savedRate;
@@ -176,12 +118,25 @@ public class MainActivity extends AppCompatActivity {
                             conversionHistory.add(result);
                             historyAdapter.notifyDataSetChanged();
                         } else {
-                            resultText.setText(getString(R.string.api_error));
+                            resultText.setText(R.string.api_error);
                         }
                     }
             );
 
             queue.add(request);
         });
+    }
+
+    // ✅ Currency list for dropdown
+    private ArrayAdapter<String> getCurrencyAdapter() {
+        String[] currencies = {
+                "USD","PKR","EUR","INR","GBP","JPY","AUD","CAD","CNY","SAR","AED","TRY","NZD","ZAR",
+                "CHF","SGD","HKD","KRW","NOK","SEK","DKK","MXN","BRL","RUB","THB","IDR","MYR","PHP",
+                "PLN","HUF","CZK","ILS","EGP","BDT","LKR","NGN","KES","GHS","MAD","TND","UAH","VND",
+                "ARS","CLP","COP","PEN","KWD","OMR","QAR","BHD","IRR","IQD","AFN","AZN","UZS","KZT"
+        };
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, currencies);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        return adapter;
     }
 }
